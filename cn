@@ -1,0 +1,303 @@
+#exp1 client.java
+import java.io.*;
+import java.net.*;
+import java.util.*;
+class client {
+    public static void main (String args[]){
+       try{
+        Socket s = new Socket("localhost",6666);
+        BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+        BufferedReader b = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter pw = new PrintWriter(s.getOutputStream(),true);
+        String msg = "";
+        String response = "";
+        while(true){
+            System.out.println("Enter the message to the server");
+            msg = b.readLine();
+            pw.println(msg);
+            response = br.readLine();
+            if(response!=null){
+                System.out.println("message from server"+response);
+            }
+        }
+       }catch(Exception e){
+         System.out.println(e);
+       }
+    }
+}
+#exp1 server.java
+import java.io.*;
+import java.net.*;
+import java.util.*;
+public class Server {
+    public static void main(String args[]){
+        try(ServerSocket s = new ServerSocket(6666);){
+           System.out.println("waiting for client");
+           Socket ss = s.accept();
+           System.out.println("Client Connected Successfully");
+           BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+           BufferedReader b = new BufferedReader(new InputStreamReader(ss.getInputStream()));
+           PrintWriter pw = new PrintWriter(ss.getOutputStream(),true);
+           String msg = "";
+           String response = "";
+           while(true){
+              msg = b.readLine();
+              if(msg.equals("")){
+                return;
+              }else{
+                System.out.println(msg);
+              }
+              System.out.println("Enter the response to the client");
+              response = br.readLine();
+              pw.println(response);
+           }
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+}
+#exp2 TCPServer.java
+import java.util.*;
+import java.io.*;
+import java.net.*;
+class Tcpserver {
+    public static void main(String args[]){
+        if(args.length<1){
+            System.out.println("Enter the directory");
+            return;
+        }
+        String dir = args[0];
+        try(ServerSocket ss = new ServerSocket(6666);
+        Socket s = ss.accept();
+        BufferedReader b = new BufferedReader(new InputStreamReader(s.getInputStream()));
+        PrintWriter pw = new PrintWriter(s.getOutputStream(),true);
+        ){
+            File directory = new File(dir);
+            if(!directory.exists()&&!directory.isDirectory()){
+                return;
+            }
+            String fname = b.readLine();
+            if(fname == null){
+                return;
+            }
+            File obj = new File(dir,fname);
+            try(FileOutputStream fr = new FileOutputStream(obj)){
+                int c;
+                while((c = b.read()) !=-1){
+                    fr.write(c);
+                    fr.flush();
+                }
+            }
+
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+}
+#exp2 TCPClient.java
+import java.util.*;
+import java.io.*;
+import java.net.*;
+ class Tcpclient {
+    public static void main(String args[]){
+        if(args.length<1){
+            return;
+        }
+        String dir = args[0];
+        try(Socket s = new Socket("localhost",6666)){
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            BufferedReader b = new BufferedReader(new InputStreamReader(s.getInputStream()));
+            PrintWriter pw = new PrintWriter(s.getOutputStream(),true);
+            Scanner sc = new Scanner(System.in);
+            System.out.println("Enter the file name");
+            String fname = sc.nextLine();
+            File obj = new File(dir,fname);
+            if(obj.exists()&&obj.isFile()){
+                pw.println(fname);
+                try(FileInputStream fs = new FileInputStream(obj)){
+                    send_bytes(fs,s.getOutputStream());
+                }
+                System.out.println("File uploaded");
+            }else{
+                System.out.println("File not found");
+            }
+
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+    static void send_bytes(InputStream in,OutputStream out) throws IOException{
+        int c;
+        while((c = in.read())!=-1){
+            out.write((c+3)%256);
+        }
+        out.flush();
+    }
+}
+#exp3 MyServerIntf
+import java.rmi.*;
+public interface MyserverIntf extends Remote{
+    String palindrome(String input)throws RemoteException;
+}
+#exp3 MyServer.java
+import java.rmi.*;
+import java.rmi.server.*;
+import java.io.*;
+
+public class MyServer{
+    public static void main(String args[]){
+        try{
+MyServerImpl obj=new MyServerImpl();
+Naming.rebind("RMServer",obj);
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+}
+#exp3 MyServerImpl.java
+import java.util.*;
+import java.rmi.*;
+import java.rmi.server.*;
+import java.io.*;
+
+public class MyServerImpl extends UnicastRemoteObject implements MyserverIntf{
+    MyServerImpl()throws RemoteException{};
+   
+    public String palindrome(String str)throws RemoteException{
+        String reverse="";
+        int n=str.length();
+for(int i=n-1;i>=0;i--){
+    reverse+=str.charAt(i);
+
+}
+if(reverse.equals(str)){
+return "palindrome";
+}
+else
+return "not a plaindrome";
+    }
+}
+#exp3 MyClient.java
+import java.io.*;
+import java.rmi.*;
+import java.rmi.server.*;
+
+public class MyClient{
+    public static void main(String arg[]){
+        try{
+        String name="rmi://"+arg[0]+"/RMServer";
+        
+        MyserverIntf obj=(MyserverIntf)Naming.lookup(name);
+        System.out.println("Palindrome String"+obj.palindrome("MadaM"));
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+}
+#exp 4
+set ns [new Simulator]
+
+$ns color 0 blue
+$ns color 1 black
+
+
+set tr [open droptail-queue-out.tr w]
+$ns trace-all $tr
+
+set ftr [open droptail-queue-out.nam w]
+$ns namtrace-all $ftr
+
+set n0 [$ns node]
+set n1 [$ns node]
+set n2 [$ns node]
+set n3 [$ns node]
+set n4 [$ns node]
+set n5 [$ns node]
+
+$ns duplex-link $n0 $n2 5Mb 2ms DropTail
+$ns duplex-link $n1 $n2 10Mb 5ms DropTail
+$ns duplex-link $n2 $n3 4Mb 3ms DropTail
+$ns duplex-link $n3 $n4 100Mb 2ms DropTail
+$ns duplex-link $n3 $n5 15Mb 4ms DropTail
+
+set udp [new Agent/UDP]
+
+$udp set fid_ 1
+set null [new Agent/Null]
+
+$ns attach-agent $n0 $udp 
+$ns attach-agent $n4 $null
+$ns connect $udp $null
+
+set tcp [new Agent/TCP]
+$tcp set fid_ 0
+set sink [new Agent/TCPSink]
+$ns attach-agent $n1 $tcp
+$ns attach-agent $n5 $sink
+$ns connect $tcp $sink
+$ns connect $tcp $sink
+
+set cbr [new Application/Traffic/CBR]
+$cbr attach-agent $udp
+$cbr set interval 0.020
+
+set ftp [new Application/FTP]
+$ftp attach-agent $tcp
+
+$ftp set interval 0.020
+proc finish {} {
+           global ns tr ftr
+           $ns flush-trace
+           close $tr
+           close $ftr
+           exec nam droptail-queue-out.nam &
+           exec gawk -f analysis.awk droptail-queue-out.tr &
+           exit
+}
+
+$ns at 0.1 "$cbr start"
+$ns at 2.0 "$cbr stop"
+$ns at 0.1 "$ftp start"
+$ns at 2.0 "$ftp stop"
+$ns at 2.1 "finish"
+
+$ns run
+#exp4 throughput
+BEGIN{
+send=0;
+received=0;
+dropped=0;
+start=1.0;
+stop=3.0;
+}
+
+{
+if($1=="/+/")
+{
+send++;
+}
+
+if($5=="tcp")
+{
+if($1=="d")
+{
+dropped++;
+}
+}
+
+if($1=="r")
+{
+received++;
+}
+}
+
+END{
+if(send=="0" && received=="0")
+{
+print "Empty nam file received"
+}
+
+print "Number of packets received " received
+print "Number of packets dropped " dropped
+print "Throughput= " (received*8)/(stop-start) " bits per second"
+}
